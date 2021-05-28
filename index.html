@@ -1,0 +1,285 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>hls-player-chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="upgrade-insecure-requests"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.3.2/firebase.js"></script>
+    <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>    <link
+      href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet" />
+    <link
+      href="https://unpkg.com/@videojs/themes@1/dist/fantasy/index.css"
+      rel="stylesheet"
+    />
+    <style>
+      .overflow-y-scroll::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="text-white bg-gray-700 select-none xl:flex">
+    <video
+      id="live"
+      class="video-js w-full h-2/6 vjs-theme-fantasy xl:h-full"
+      controls
+      autoplay
+    ></video>
+    <div id="app" class="w-full h-4/6 overflow-hidden xl:w-2/5 xl:h-full">
+      <div v-if="!login" class="p-3 space-y-3">
+        <form @submit.prevent="userLogin" class="flex">
+          <input
+            id="userLogin"
+            placeholder="Enter your username"
+            class="
+              p-3
+              w-full
+              text-black
+              shadow
+              outline-none
+              rounded-l-lg
+              focus:ring
+            "
+            v-model="username"
+          />
+          <button
+            @click="userLogin"
+            class="
+              w-1/4
+              bg-blue-700 bg-gradient-to-r
+              from-blue-400
+              to-blue-600
+              hover:from-blue-500
+              hover:to-red-400
+              focus:outline-none
+              py-2
+              px-6
+              rounded-r-lg
+            "
+          >
+            Login
+          </button>
+        </form>
+        <h3 class="font-light text-2xl border-b">Channels</h3>
+        <div class="flex">
+          <div
+            class="flex-1 p-4 ml-4 mr-4 rounded-lg bg-gray-800 cursor-pointer"
+            v-for="video in videos"
+            @click="player.src(video.url)"
+          >
+            <img class="w-full" :src="video.logo" />
+          </div>
+        </div>
+      </div>
+      <div v-else>
+        <div class="p-3 space-y-3 h-5/6 overflow-y-scroll">
+          <div
+            class="p-3 rounded-lg bg-gradient-to-r to-red-500"
+            v-bind:class="[username == message.username ? 'from-blue-500' : '', 'from-yellow-500']"
+            v-for="message in messages"
+          >
+            <div class="flex font-bold space-x-3">
+              <span class="overflow-ellipsis overflow-hidden"
+                >{{ message.username }}</span
+              >
+              <span class="flex-1 text-gray-100">{{ message.timestamp }}</span>
+              <span
+                class="cursor-pointer text-2xl"
+                v-if="username == message.username"
+                @click="deleteMessage(message)"
+                >&times;</span
+              >
+            </div>
+            <p class="overflow-ellipsis overflow-hidden">
+              {{ message.message }}
+            </p>
+          </div>
+          <div id="bottom"></div>
+        </div>
+        <div class="p-3 h-1/6 xl:space-y-3">
+          <div class="hidden bg-gray-500 p-3 text-3xl rounded-lg xl:block">
+            <span @click="messageText += '😀',$refs['msgArea'].focus()"
+              >😀</span
+            >
+            <span @click="messageText += '👍',$refs['msgArea'].focus()"
+              >👍</span
+            >
+            <span @click="messageText += '👑',$refs['msgArea'].focus()"
+              >👑</span
+            >
+            <span @click="messageText += '😂',$refs['msgArea'].focus()"
+              >😂</span
+            >
+            <span @click="messageText += '😁', $refs['msgArea'].focus()"
+              >😁</span
+            >
+            <span @click="messageText += '😎', $refs['msgArea'].focus()"
+              >😎</span
+            >
+          </div>
+          <div class="flex">
+            <input
+              type="text"
+              placeholder="Write message"
+              class="
+                p-3
+                w-full
+                text-black
+                shadow
+                outline-none
+                rounded-l-lg
+                focus:ring
+              "
+              ref="msgArea"
+              v-model="messageText"
+              @keyup.enter="sendMessage"
+            />
+            <button
+              @click="sendMessage"
+              class="
+                w-1/4
+                bg-blue-700 bg-gradient-to-r
+                from-blue-400
+                to-blue-600
+                hover:from-blue-500
+                hover:to-red-400
+                focus:outline-none
+                py-2
+                px-6
+                rounded-r-lg
+              "
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      firebase.initializeApp({
+        databaseURL: "https://akalan-db.firebaseio.com",
+      });
+      var dbMessages = firebase.database().ref("hls-player-chat/messages");
+      var player = videojs("live");
+      player.src(
+        "https://vod-progressive.akamaized.net/exp=1622242070~acl=%2Fvimeo-prod-skyfire-std-us%2F01%2F3767%2F20%2F518836614%2F2416068475.mp4~hmac=1a1b05a554ccd7d73bccccc34b98a992fabb9439e7e3dd1c84fe4c400c66689c/vimeo-prod-skyfire-std-us/01/3767/20/518836614/2416068475.mp4?filename=Boat+-+66581.mp4"
+      );
+      player.currentTime(localStorage.getItem("currentTime"));
+      setInterval(function () {
+        localStorage.setItem("currentTime", player.currentTime());
+      }, 3000);
+      new Vue({
+        el: "#app",
+        data: {
+          login: false,
+          username: "",
+          videoUrl: "",
+          videos: [],
+          messages: [],
+          messageText: "",
+        },
+        created: function () {
+          this.videos.push(
+            {
+              title: "Trt 1",
+              logo: "https://i.ibb.co/YTthcZ3/Trt1.png",
+              url: "http://tv-trt1.live.trt.com.tr/master_720.m3u8",
+            },
+            {
+              title: "Trt Haber",
+              logo: "https://i.ibb.co/f2nNQTJ/TrtHaber.png",
+              url: "http://tv-trthaber.live.trt.com.tr/master_720.m3u8",
+            },
+            {
+              title: "Trt Belgesel",
+              logo: "https://i.ibb.co/6y1ns8y/Trt-Belgesel.png",
+              url: "https://tv-trtbelgesel.live.trt.com.tr/master_720.m3u8",
+            }
+          );
+          localStorage.setItem("videos", JSON.stringify(this.videos));
+          this.videos = JSON.parse(localStorage.getItem("videos"));
+        },
+        methods: {
+          userLogin() {
+            if (this.username) {
+              this.login = true;
+              dbMessages.on("child_added", (snapshot) => {
+                this.messages.push({ ...snapshot.val(), id: snapshot.key });
+              });
+              dbMessages.on("child_removed", (snapshot) => {
+                this.messages.splice(
+                  this.messages.indexOf(
+                    this.messages.find((message) => message.id === snapshot.key)
+                  ),
+                  1
+                );
+              });
+            }
+          },
+          sendMessage() {
+            if (this.messageText) {
+              var d = new Date();
+              var months = [
+                "Ocak",
+                "Şubat",
+                "Mart",
+                "Nisan",
+                "Mayıs",
+                "Haziran",
+                "Temmuz",
+                "Ağustos",
+                "Eylül",
+                "Ekim",
+                "Kasım",
+                "Aralık",
+              ];
+              const dateTime =
+                d.getDate() +
+                " " +
+                months[d.getMonth()] +
+                " " +
+                d.getFullYear() +
+                " " +
+                d.getHours() +
+                ":" +
+                d.getMinutes();
+              dbMessages.push({
+                username: this.username,
+                message: this.messageText,
+                timestamp: dateTime,
+              });
+              if (this.messageText.includes("http") == true) {
+                player.src(this.messageText);
+              }
+              this.messageText = "";
+            }
+            this.$refs["msgArea"].focus();
+          },
+          deleteMessage(message) {
+            dbMessages.child(message.id).remove();
+          },
+        },
+        watch: {
+          messages() {
+            setTimeout(function () {
+              document
+                .getElementById("bottom")
+                .scrollIntoView({ behavior: "smooth" });
+            }, 0);
+            var audio = new Audio(
+              "https://notificationsounds.com/storage/sounds/file-sounds-1148-juntos.ogg"
+            );
+            audio.volume = 0.3;
+            audio.play();
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
