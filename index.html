@@ -168,7 +168,7 @@
       var dbMessages = firebase.database().ref("hls-player-chat/messages");
       var player = videojs("live");
       player.src(
-        "https://vod-progressive.akamaized.net/exp=1622242070~acl=%2Fvimeo-prod-skyfire-std-us%2F01%2F3767%2F20%2F518836614%2F2416068475.mp4~hmac=1a1b05a554ccd7d73bccccc34b98a992fabb9439e7e3dd1c84fe4c400c66689c/vimeo-prod-skyfire-std-us/01/3767/20/518836614/2416068475.mp4?filename=Boat+-+66581.mp4"
+        "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
       );
       player.currentTime(localStorage.getItem("currentTime"));
       setInterval(function () {
