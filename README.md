@@ -3,11 +3,6 @@
 <p align="center">
   <img src="screenshot.png"/>
 </p>
-Demo : https://05akalan57.github.io/hls-player-chat/
-
-### Usage
-
-- Open index.html file with browser
 
 ### Features
 
