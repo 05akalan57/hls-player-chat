@@ -10,6 +10,7 @@
 - Set your desired profile picture
 - You can play any video you want with the "/video link" command.
 - Continue where you left off in videos
+- Create your own private room.
 - Notification sound etc.
 
 ### Warning
