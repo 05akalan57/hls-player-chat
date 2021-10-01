@@ -1,4 +1,4 @@
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <title>hls-player-chat</title>
@@ -37,7 +37,7 @@
         <form @submit.prevent="userLogin" class="flex">
           <input
             id="username"
-            placeholder="Username"
+            placeholder="Kullanıcı Adı"
             class="
               p-3
               w-full
@@ -52,7 +52,7 @@
           />
           <input
             id="avatar"
-            placeholder="Avatar"
+            placeholder="Profil Resmi"
             class="
               p-3
               w-full
@@ -63,6 +63,20 @@
               focus:ring
             "
             v-model="avatar"
+          />
+          <input
+            id="roomId"
+            placeholder="Oda Id"
+            class="
+              p-3
+              w-full
+              border-l
+              text-black
+              shadow
+              outline-none
+              focus:ring
+            "
+            v-model="roomId"
           />
           <button
             @click="userLogin"
@@ -78,10 +92,10 @@
               rounded-r-lg
             "
           >
-            Login
+            Katıl
           </button>
         </form>
-        <h3 class="font-light text-2xl border-b">Channels</h3>
+        <h3 class="font-light text-2xl border-b">Kanallar</h3>
         <div class="flex">
           <div
             class="flex-1 p-4 ml-4 mr-4 rounded-lg bg-gray-800 cursor-pointer"
@@ -185,7 +199,6 @@
       firebase.initializeApp({
         databaseURL: "https://akalan-db.firebaseio.com",
       });
-      var dbMessages = firebase.database().ref("hls-player-chat/messages");
       var player = videojs("live");
       player.src(
         "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
@@ -198,6 +211,7 @@
         el: "#app",
         data: {
           login: false,
+          roomId: JSON.parse(localStorage.getItem("roomId")),
           username: JSON.parse(localStorage.getItem("username")),
           avatar: JSON.parse(localStorage.getItem("avatar")),
           videos: [],
@@ -227,8 +241,12 @@
           userLogin() {
             if (this.username) {
               this.login = true;
+              localStorage.setItem("roomId", JSON.stringify(this.roomId));
               localStorage.setItem("username", JSON.stringify(this.username));
               localStorage.setItem("avatar", JSON.stringify(this.avatar));
+              var dbMessages = firebase
+                .database()
+                .ref("hls-player-chat/" + this.roomId + "/messages");
               dbMessages.on("child_added", (snapshot) => {
                 this.messages.push({ ...snapshot.val(), id: snapshot.key });
               });
@@ -277,19 +295,26 @@
                   message: "Video linki medya oynatıcıya gönderildi.",
                 });
               } else {
-                dbMessages.push({
-                  username: this.username,
-                  avatar: this.avatar || "assets/avatar-user.png",
-                  message: this.messageText,
-                  timestamp: dateTime,
-                });
+                firebase
+                  .database()
+                  .ref("hls-player-chat/" + this.roomId + "/messages")
+                  .push({
+                    username: this.username,
+                    avatar: this.avatar || "assets/avatar-user.png",
+                    message: this.messageText,
+                    timestamp: dateTime,
+                  });
               }
               this.messageText = "";
             }
             this.$refs["msgArea"].focus();
           },
           deleteMessage(message) {
-            dbMessages.child(message.id).remove();
+            firebase
+              .database()
+              .ref("hls-player-chat/" + this.roomId + "/messages")
+              .child(message.id)
+              .remove();
           },
         },
         watch: {
